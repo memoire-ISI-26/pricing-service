@@ -2,11 +2,13 @@ package com.financedomain.pricing.controller;
 
 import com.financedomain.pricing.bean.PalierIlliflex;
 import com.financedomain.pricing.bean.PassIlliflex;
+import com.financedomain.pricing.dto.ApiResponse;
 import com.financedomain.pricing.dto.PassIlliflexRequest;
 import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.service.PassIlliflexService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,25 +22,34 @@ public class PassIlliflexController {
     @Autowired
     private PassIlliflexService passIlliflexService;
 
+    @Autowired
+    private Environment environment;
+
+    private String getPort() {
+        return environment.getProperty("local.server.port", "unknown");
+    }
+
     @PostMapping
     public ResponseEntity<?> createPass(@RequestBody PassIlliflexRequest request) {
         try {
             PassIlliflex pass = passIlliflexService.createPass(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(pass);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse<>(pass, getPort()));
         } catch (PassAlreadyExistsException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<PassIlliflex>> getAllPass() {
-        return ResponseEntity.ok(passIlliflexService.getAllPass());
+    public ResponseEntity<?> getAllPass() {
+        List<PassIlliflex> list = passIlliflexService.getAllPass();
+        return ResponseEntity.ok(new ApiResponse<>(list, getPort()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getPassById(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(passIlliflexService.getPassById(id));
+            return ResponseEntity.ok(new ApiResponse<>(passIlliflexService.getPassById(id), getPort()));
         } catch (PassNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
@@ -48,7 +59,7 @@ public class PassIlliflexController {
     public ResponseEntity<?> getPaliersByPassId(@PathVariable Long id) {
         try {
             List<PalierIlliflex> paliers = passIlliflexService.getPaliersByPassId(id);
-            return ResponseEntity.ok(paliers);
+            return ResponseEntity.ok(new ApiResponse<>(paliers, getPort()));
         } catch (PassNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
@@ -57,7 +68,7 @@ public class PassIlliflexController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePass(@PathVariable Long id, @RequestBody PassIlliflexRequest request) {
         try {
-            return ResponseEntity.ok(passIlliflexService.updatePass(id, request));
+            return ResponseEntity.ok(new ApiResponse<>(passIlliflexService.updatePass(id, request), getPort()));
         } catch (PassNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
