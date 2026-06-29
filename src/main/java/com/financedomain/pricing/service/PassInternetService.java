@@ -7,6 +7,9 @@ import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.repository.PassInternetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +20,10 @@ public class PassInternetService {
     @Autowired
     private PassInternetRepository passInternetRepository;
 
+    @Caching(evict = {
+        @CacheEvict(value = "passInternetList", allEntries = true),
+        @CacheEvict(value = "passInternetByPeriode", allEntries = true)
+    })
     public PassInternet createPass(PassInternetRequest request) {
         PeriodePass periode = PeriodePass.valueOf(request.getPeriode().toUpperCase());
         if (passInternetRepository.existsByNomAndPeriode(request.getNom(), periode)) {
@@ -31,20 +38,28 @@ public class PassInternetService {
         return passInternetRepository.save(pass);
     }
 
+    @Cacheable(value = "passInternetList")
     public List<PassInternet> getAllPass() {
         return passInternetRepository.findAll();
     }
 
+    @Cacheable(value = "passInternet", key = "#id")
     public PassInternet getPassById(Long id) {
         return passInternetRepository.findById(id)
                 .orElseThrow(() -> new PassNotFoundException("Pass Internet introuvable avec l'id : " + id));
     }
 
+    @Cacheable(value = "passInternetByPeriode", key = "#periodeStr")
     public List<PassInternet> getPassByPeriode(String periodeStr) {
         PeriodePass periode = PeriodePass.valueOf(periodeStr.toUpperCase());
         return passInternetRepository.findByPeriode(periode);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "passInternetList", allEntries = true),
+        @CacheEvict(value = "passInternet", key = "#id"),
+        @CacheEvict(value = "passInternetByPeriode", allEntries = true)
+    })
     public PassInternet updatePass(Long id, PassInternetRequest request) {
         PassInternet pass = getPassById(id);
         PeriodePass periode = PeriodePass.valueOf(request.getPeriode().toUpperCase());
@@ -55,6 +70,11 @@ public class PassInternetService {
         return passInternetRepository.save(pass);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "passInternetList", allEntries = true),
+        @CacheEvict(value = "passInternet", key = "#id"),
+        @CacheEvict(value = "passInternetByPeriode", allEntries = true)
+    })
     public void deletePass(Long id) {
         if (!passInternetRepository.existsById(id)) {
             throw new PassNotFoundException("Pass Internet introuvable avec l'id : " + id);

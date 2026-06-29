@@ -8,6 +8,9 @@ import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.repository.PalierIlliflexRepository;
 import com.financedomain.pricing.repository.PassIlliflexRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ public class PassIlliflexService {
     private PalierIlliflexRepository palierIlliflexRepository;
 
     @Transactional
+    @CacheEvict(value = "passIlliflexList", allEntries = true)
     public PassIlliflex createPass(PassIlliflexRequest request) {
         if (passIlliflexRepository.existsByNom(request.getNom())) {
             throw new PassAlreadyExistsException(
@@ -51,15 +55,18 @@ public class PassIlliflexService {
                 .orElseThrow(() -> new PassNotFoundException("Erreur lors de la récupération du pass créé."));
     }
 
+    @Cacheable(value = "passIlliflexList")
     public List<PassIlliflex> getAllPass() {
         return passIlliflexRepository.findAll();
     }
 
+    @Cacheable(value = "passIlliflex", key = "#id")
     public PassIlliflex getPassById(Long id) {
         return passIlliflexRepository.findById(id)
                 .orElseThrow(() -> new PassNotFoundException("Pass Illiflex introuvable avec l'id : " + id));
     }
 
+    @Cacheable(value = "passIlliflexPaliers", key = "#id")
     public List<PalierIlliflex> getPaliersByPassId(Long id) {
         if (!passIlliflexRepository.existsById(id)) {
             throw new PassNotFoundException("Pass Illiflex introuvable avec l'id : " + id);
@@ -68,6 +75,11 @@ public class PassIlliflexService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "passIlliflexList", allEntries = true),
+        @CacheEvict(value = "passIlliflex", key = "#id"),
+        @CacheEvict(value = "passIlliflexPaliers", key = "#id")
+    })
     public PassIlliflex updatePass(Long id, PassIlliflexRequest request) {
         PassIlliflex pass = getPassById(id);
         pass.setNom(request.getNom());
@@ -92,6 +104,11 @@ public class PassIlliflexService {
         return passIlliflexRepository.save(pass);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "passIlliflexList", allEntries = true),
+        @CacheEvict(value = "passIlliflex", key = "#id"),
+        @CacheEvict(value = "passIlliflexPaliers", key = "#id")
+    })
     public void deletePass(Long id) {
         if (!passIlliflexRepository.existsById(id)) {
             throw new PassNotFoundException("Pass Illiflex introuvable avec l'id : " + id);
