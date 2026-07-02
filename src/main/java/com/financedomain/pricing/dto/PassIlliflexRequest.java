@@ -13,5 +13,6 @@ public class PassIlliflexRequest {
     private String nom;
     private Double prix;
     private Integer nbMessagesFixe;
+    private String periode;
     private List<PalierIlliflexRequest> paliers;
 }

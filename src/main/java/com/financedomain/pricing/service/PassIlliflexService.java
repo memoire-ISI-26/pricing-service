@@ -3,6 +3,7 @@ package com.financedomain.pricing.service;
 import com.financedomain.pricing.bean.PalierIlliflex;
 import com.financedomain.pricing.bean.PassIlliflex;
 import com.financedomain.pricing.dto.PassIlliflexRequest;
+import com.financedomain.pricing.enums.PeriodePass;
 import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.repository.PalierIlliflexRepository;
@@ -37,6 +38,9 @@ public class PassIlliflexService {
         pass.setNom(request.getNom());
         pass.setPrix(request.getPrix());
         pass.setNbMessagesFixe(request.getNbMessagesFixe());
+        if (request.getPeriode() != null) {
+            pass.setPeriode(PeriodePass.valueOf(request.getPeriode().toUpperCase()));
+        }
 
         PassIlliflex savedPass = passIlliflexRepository.save(pass);
 
@@ -85,6 +89,9 @@ public class PassIlliflexService {
         pass.setNom(request.getNom());
         pass.setPrix(request.getPrix());
         pass.setNbMessagesFixe(request.getNbMessagesFixe());
+        if (request.getPeriode() != null) {
+            pass.setPeriode(PeriodePass.valueOf(request.getPeriode().toUpperCase()));
+        }
 
         // Supprimer les anciens paliers et les remplacer
         pass.getPaliers().clear();
