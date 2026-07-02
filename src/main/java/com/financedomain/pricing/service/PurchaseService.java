@@ -34,14 +34,16 @@ public class PurchaseService {
     @Autowired
     private WalletProxy walletProxy;
 
-    public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+    private static final String NONEXISTENT = "n'existe pas.";
+
+    public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
         PassInternet pass = null;
         if (request.getPassId() != null) {
             pass = passInternetRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Internet avec l'id " + request.getPassId() + " n'existe pas."));
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass Internet avec l'id " + request.getPassId() + " " + NONEXISTENT));
         } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
             pass = passInternetRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Internet avec le nom '" + request.getPassName() + "' n'existe pas."));
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass Internet avec le nom '" + request.getPassName() + " " + NONEXISTENT));
         } else {
             throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass internet à acheter.");
         }
@@ -56,14 +58,14 @@ public class PurchaseService {
         return callWalletService(walletRequest, xUserPhone, xUserRole);
     }
 
-    public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+    public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
         PassIllimix pass = null;
         if (request.getPassId() != null) {
             pass = passIllimixRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illimix avec l'id " + request.getPassId() + " n'existe pas."));
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illimix avec l'id " + request.getPassId() + " " + NONEXISTENT));
         } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
             pass = passIllimixRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illimix avec le nom '" + request.getPassName() + "' n'existe pas."));
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illimix avec le nom '" + request.getPassName() + " " + NONEXISTENT));
         } else {
             throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass illimix à acheter.");
         }
@@ -78,14 +80,14 @@ public class PurchaseService {
         return callWalletService(walletRequest, xUserPhone, xUserRole);
     }
 
-    public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+    public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
         PassIlliflex pass = null;
         if (request.getPassId() != null) {
             pass = passIlliflexRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illiflex avec l'id " + request.getPassId() + " n'existe pas."));
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illiflex avec l'id " + request.getPassId() + " " + NONEXISTENT));
         } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
             pass = passIlliflexRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illiflex avec le nom '" + request.getPassName() + "' n'existe pas."));
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illiflex avec le nom '" + request.getPassName() + " " + NONEXISTENT));
         } else {
             throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass illiflex à acheter.");
         }
@@ -100,7 +102,7 @@ public class PurchaseService {
         return callWalletService(walletRequest, xUserPhone, xUserRole);
     }
 
-    public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+    public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
         if (request.getAmount() == null || request.getAmount() <= 0) {
             throw new IllegalArgumentException("Le montant du crédit doit être supérieur à 0.");
         }
@@ -120,9 +122,9 @@ public class PurchaseService {
         try {
             userProxy.getClientByNumber(sender, null, null, "INTERNAL");
         } catch (feign.FeignException.NotFound e) {
-            throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + "' n'existe pas.");
+            throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + " " + NONEXISTENT);
         } catch (feign.FeignException e) {
-            throw new RuntimeException("Erreur de communication avec le service utilisateur pour validation de l'acheteur : " + e.getMessage());
+            throw new LinkException("Erreur de communication avec le service utilisateur pour validation de l'acheteur : " + e.getMessage());
         }
 
         // Validate receiver if different
@@ -130,9 +132,9 @@ public class PurchaseService {
             try {
                 userProxy.getClientByNumber(receiver, null, null, "INTERNAL");
             } catch (feign.FeignException.NotFound e) {
-                throw new UserNotFoundException("Le client destinataire avec le numéro '" + receiver + "' n'existe pas.");
+                throw new UserNotFoundException("Le client destinataire avec le numéro '" + receiver + " " + NONEXISTENT);
             } catch (feign.FeignException e) {
-                throw new RuntimeException("Erreur de communication avec le service utilisateur pour validation du destinataire : " + e.getMessage());
+                throw new LinkException("Erreur de communication avec le service utilisateur pour validation du destinataire : " + e.getMessage());
             }
         }
     }
@@ -147,7 +149,7 @@ public class PurchaseService {
             String errorMsg = content != null && !content.isEmpty() ? content : e.getMessage();
             throw new IllegalArgumentException(errorMsg);
         } catch (feign.FeignException e) {
-            throw new RuntimeException("Erreur lors de la communication avec le service portefeuille : " + e.getMessage());
+            throw new LinkException ("Erreur lors de la communication avec le service portefeuille : " + e.getMessage());
         }
     }
 }
