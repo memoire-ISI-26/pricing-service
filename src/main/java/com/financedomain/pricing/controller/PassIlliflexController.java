@@ -19,6 +19,10 @@ import java.util.List;
 @RequestMapping("/pricing/pass-illiflex")
 public class PassIlliflexController {
 
+    private static final String UNAUTHORIZED  = "Unauthorized";
+    private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
+    private static final String ADMINISTRATOR = "ADMINISTRATOR";
+
     @Autowired
     private PassIlliflexService passIlliflexService;
 
@@ -29,25 +33,21 @@ public class PassIlliflexController {
         return environment.getProperty("local.server.port", "unknown");
     }
 
-    @PostMapping
-    public ResponseEntity<?> createPass(@RequestBody PassIlliflexRequest request) {
-        try {
-            PassIlliflex pass = passIlliflexService.createPass(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new ApiResponse<>(pass, getPort()));
-        } catch (PassAlreadyExistsException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
-    }
+    // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
 
     @GetMapping
-    public ResponseEntity<?> getAllPass() {
+    public ResponseEntity<?> getAllPass(
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         List<PassIlliflex> list = passIlliflexService.getAllPass();
         return ResponseEntity.ok(new ApiResponse<>(list, getPort()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPassById(@PathVariable Long id) {
+    public ResponseEntity<?> getPassById(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         try {
             return ResponseEntity.ok(new ApiResponse<>(passIlliflexService.getPassById(id), getPort()));
         } catch (PassNotFoundException e) {
@@ -56,7 +56,10 @@ public class PassIlliflexController {
     }
 
     @GetMapping("/{id}/paliers")
-    public ResponseEntity<?> getPaliersByPassId(@PathVariable Long id) {
+    public ResponseEntity<?> getPaliersByPassId(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         try {
             List<PalierIlliflex> paliers = passIlliflexService.getPaliersByPassId(id);
             return ResponseEntity.ok(new ApiResponse<>(paliers, getPort()));
@@ -65,8 +68,29 @@ public class PassIlliflexController {
         }
     }
 
+    // ── Écriture : réservé à l'administrateur ────────────────────────────────
+
+    @PostMapping
+    public ResponseEntity<?> createPass(
+            @RequestBody PassIlliflexRequest request,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        try {
+            PassIlliflex pass = passIlliflexService.createPass(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(pass, getPort()));
+        } catch (PassAlreadyExistsException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePass(@PathVariable Long id, @RequestBody PassIlliflexRequest request) {
+    public ResponseEntity<?> updatePass(
+            @PathVariable Long id,
+            @RequestBody PassIlliflexRequest request,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
         try {
             return ResponseEntity.ok(new ApiResponse<>(passIlliflexService.updatePass(id, request), getPort()));
         } catch (PassNotFoundException e) {
@@ -75,7 +99,11 @@ public class PassIlliflexController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePass(@PathVariable Long id) {
+    public ResponseEntity<?> deletePass(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
         try {
             passIlliflexService.deletePass(id);
             return ResponseEntity.noContent().build();

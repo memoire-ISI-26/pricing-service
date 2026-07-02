@@ -18,6 +18,10 @@ import java.util.List;
 @RequestMapping("/pricing/pass-internet")
 public class PassInternetController {
 
+    private static final String UNAUTHORIZED = "Unauthorized";
+    private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
+    private static final String ADMINISTRATOR  = "ADMINISTRATOR";
+
     @Autowired
     private PassInternetService passInternetService;
 
@@ -28,27 +32,21 @@ public class PassInternetController {
         return environment.getProperty("local.server.port", "unknown");
     }
 
-    @PostMapping
-    public ResponseEntity<?> createPass(@RequestBody PassInternetRequest request) {
-        try {
-            PassInternet pass = passInternetService.createPass(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new ApiResponse<>(pass, getPort()));
-        } catch (PassAlreadyExistsException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Période invalide : " + request.getPeriode());
-        }
-    }
+    // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
 
     @GetMapping
-    public ResponseEntity<?> getAllPass() {
+    public ResponseEntity<?> getAllPass(
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         List<PassInternet> list = passInternetService.getAllPass();
         return ResponseEntity.ok(new ApiResponse<>(list, getPort()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPassById(@PathVariable Long id) {
+    public ResponseEntity<?> getPassById(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         try {
             return ResponseEntity.ok(new ApiResponse<>(passInternetService.getPassById(id), getPort()));
         } catch (PassNotFoundException e) {
@@ -57,7 +55,10 @@ public class PassInternetController {
     }
 
     @GetMapping("/periode/{periode}")
-    public ResponseEntity<?> getPassByPeriode(@PathVariable String periode) {
+    public ResponseEntity<?> getPassByPeriode(
+            @PathVariable String periode,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         try {
             return ResponseEntity.ok(new ApiResponse<>(passInternetService.getPassByPeriode(periode), getPort()));
         } catch (IllegalArgumentException e) {
@@ -66,8 +67,31 @@ public class PassInternetController {
         }
     }
 
+    // ── Écriture : réservé à l'administrateur ────────────────────────────────
+
+    @PostMapping
+    public ResponseEntity<?> createPass(
+            @RequestBody PassInternetRequest request,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        try {
+            PassInternet pass = passInternetService.createPass(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(pass, getPort()));
+        } catch (PassAlreadyExistsException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Période invalide : " + request.getPeriode());
+        }
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePass(@PathVariable Long id, @RequestBody PassInternetRequest request) {
+    public ResponseEntity<?> updatePass(
+            @PathVariable Long id,
+            @RequestBody PassInternetRequest request,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
         try {
             return ResponseEntity.ok(new ApiResponse<>(passInternetService.updatePass(id, request), getPort()));
         } catch (PassNotFoundException e) {
@@ -78,7 +102,11 @@ public class PassInternetController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePass(@PathVariable Long id) {
+    public ResponseEntity<?> deletePass(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
         try {
             passInternetService.deletePass(id);
             return ResponseEntity.noContent().build();
