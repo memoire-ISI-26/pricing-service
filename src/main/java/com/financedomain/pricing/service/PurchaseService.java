@@ -8,6 +8,7 @@ import com.financedomain.pricing.dto.WalletPurchaseRequest;
 import com.financedomain.pricing.dto.TransactionDto;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.exception.UserNotFoundException;
+import com.financedomain.pricing.exception.LinkException;
 import com.financedomain.pricing.proxy.UserProxy;
 import com.financedomain.pricing.proxy.WalletProxy;
 import com.financedomain.pricing.repository.PassInternetRepository;
@@ -36,7 +37,7 @@ public class PurchaseService {
 
     private static final String NONEXISTENT = "n'existe pas.";
 
-    public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
+    public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
         PassInternet pass = null;
         if (request.getPassId() != null) {
             pass = passInternetRepository.findById(request.getPassId())
@@ -58,7 +59,7 @@ public class PurchaseService {
         return callWalletService(walletRequest, xUserPhone, xUserRole);
     }
 
-    public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
+    public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
         PassIllimix pass = null;
         if (request.getPassId() != null) {
             pass = passIllimixRepository.findById(request.getPassId())
@@ -80,7 +81,7 @@ public class PurchaseService {
         return callWalletService(walletRequest, xUserPhone, xUserRole);
     }
 
-    public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
+    public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
         PassIlliflex pass = null;
         if (request.getPassId() != null) {
             pass = passIlliflexRepository.findById(request.getPassId())
@@ -102,7 +103,7 @@ public class PurchaseService {
         return callWalletService(walletRequest, xUserPhone, xUserRole);
     }
 
-    public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserPhone, String xUserRole) {
+    public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
         if (request.getAmount() == null || request.getAmount() <= 0) {
             throw new IllegalArgumentException("Le montant du crédit doit être supérieur à 0.");
         }
@@ -149,7 +150,7 @@ public class PurchaseService {
             String errorMsg = content != null && !content.isEmpty() ? content : e.getMessage();
             throw new IllegalArgumentException(errorMsg);
         } catch (feign.FeignException e) {
-            throw new LinkException ("Erreur lors de la communication avec le service portefeuille : " + e.getMessage());
+            throw new LinkException("Erreur lors de la communication avec le service portefeuille : " + e.getMessage());
         }
     }
 }
