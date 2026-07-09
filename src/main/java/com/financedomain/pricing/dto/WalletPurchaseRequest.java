@@ -12,4 +12,5 @@ public class WalletPurchaseRequest {
     private String receiver;
     private double amount;
     private String type;
+    private String paymentMethod; // "WALLET" or "CREDIT"
 }

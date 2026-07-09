@@ -68,4 +68,17 @@ public class PurchaseController {
         TransactionDto txn = purchaseService.purchaseCredit(xUserPhone, request, xUserId, xUserPhone, xUserRole);
         return ResponseEntity.status(HttpStatus.CREATED).body(txn);
     }
+
+    @PostMapping("/rapido")
+    public ResponseEntity<?> purchaseRapido(
+            @RequestBody PurchaseRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId,
+            @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
+        if (xUserRole == null || xUserPhone == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        }
+        TransactionDto txn = purchaseService.purchaseRapido(xUserPhone, request, xUserId, xUserPhone, xUserRole);
+        return ResponseEntity.status(HttpStatus.CREATED).body(txn);
+    }
 }

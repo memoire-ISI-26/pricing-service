@@ -12,4 +12,5 @@ public class PurchaseRequest {
     private Long passId;
     private String passName;
     private Double amount;
+    private String paymentMethod; // "WALLET" or "CREDIT"
 }

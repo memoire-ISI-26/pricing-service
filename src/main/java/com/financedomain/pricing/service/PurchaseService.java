@@ -4,18 +4,25 @@ import com.financedomain.pricing.bean.PassInternet;
 import com.financedomain.pricing.bean.PassIllimix;
 import com.financedomain.pricing.bean.PassIlliflex;
 import com.financedomain.pricing.dto.PurchaseRequest;
+import com.financedomain.pricing.dto.TrackingEvent;
 import com.financedomain.pricing.dto.WalletPurchaseRequest;
 import com.financedomain.pricing.dto.TransactionDto;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.exception.UserNotFoundException;
 import com.financedomain.pricing.exception.LinkException;
+import com.financedomain.pricing.proxy.TrackingProxy;
 import com.financedomain.pricing.proxy.UserProxy;
 import com.financedomain.pricing.proxy.WalletProxy;
 import com.financedomain.pricing.repository.PassInternetRepository;
 import com.financedomain.pricing.repository.PassIllimixRepository;
 import com.financedomain.pricing.repository.PassIlliflexRepository;
+import com.financedomain.pricing.bean.CarteRapido;
+import com.financedomain.pricing.repository.CarteRapidoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class PurchaseService {
@@ -30,10 +37,16 @@ public class PurchaseService {
     private PassIlliflexRepository passIlliflexRepository;
 
     @Autowired
+    private CarteRapidoRepository carteRapidoRepository;
+
+    @Autowired
     private UserProxy userProxy;
 
     @Autowired
     private WalletProxy walletProxy;
+
+    @Autowired
+    private TrackingProxy trackingProxy;
 
     private static final String NONEXISTENT = "n'existe pas.";
 
@@ -55,8 +68,18 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNET");
-        return callWalletService(walletRequest, xUserPhone, xUserRole);
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNET", request.getPaymentMethod());
+        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+
+        // Tracking
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("passId", pass.getId());
+        payload.put("passNom", pass.getNom());
+        payload.put("prix", pass.getPrix());
+        payload.put("receveur", receiver);
+        sendTrackingEvent("ACHAT_PASS_INTERNET", senderPhone, xUserId, xUserRole, payload);
+
+        return txn;
     }
 
     public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
@@ -77,8 +100,18 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_ILLIMIX");
-        return callWalletService(walletRequest, xUserPhone, xUserRole);
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_ILLIMIX", request.getPaymentMethod());
+        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+
+        // Tracking
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("passId", pass.getId());
+        payload.put("passNom", pass.getNom());
+        payload.put("prix", pass.getPrix());
+        payload.put("receveur", receiver);
+        sendTrackingEvent("ACHAT_PASS_ILLIMIX", senderPhone, xUserId, xUserRole, payload);
+
+        return txn;
     }
 
     public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
@@ -99,8 +132,18 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_ILLIFLEX");
-        return callWalletService(walletRequest, xUserPhone, xUserRole);
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_ILLIFLEX", request.getPaymentMethod());
+        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+
+        // Tracking
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("passId", pass.getId());
+        payload.put("passNom", pass.getNom());
+        payload.put("prix", pass.getPrix());
+        payload.put("receveur", receiver);
+        sendTrackingEvent("ACHAT_PASS_ILLIFLEX", senderPhone, xUserId, xUserRole, payload);
+
+        return txn;
     }
 
     public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
@@ -114,8 +157,76 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, request.getAmount(), "ACHAT_CREDIT");
-        return callWalletService(walletRequest, xUserPhone, xUserRole);
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, request.getAmount(), "ACHAT_CREDIT", "WALLET");
+        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+
+        // Tracking
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("montant", request.getAmount());
+        payload.put("receveur", receiver);
+        sendTrackingEvent("ACHAT_CREDIT", senderPhone, xUserId, xUserRole, payload);
+
+        return txn;
+    }
+
+    private void sendTrackingEvent(String eventType, String msisdn, String userId, String userRole, Object payload) {
+        try {
+            TrackingEvent event = TrackingEvent.builder()
+                    .eventType(eventType)
+                    .msisdn(msisdn)
+                    .userId(userId)
+                    .userRole(userRole)
+                    .sourceService("pricing-service")
+                    .payload(payload)
+                    .timestamp(java.time.Instant.now())
+                    .build();
+            trackingProxy.collectEvent(event, "INTERNAL");
+        } catch (Exception e) {
+            System.err.println("Erreur de tracking pricing: " + e.getMessage());
+        }
+    }
+
+    public TransactionDto purchaseRapido(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+        String cardNumber = request.getReceiverNumber();
+        if (cardNumber == null || !cardNumber.matches("^\\d{10}$")) {
+            throw new IllegalArgumentException("Le numéro de la carte Rapido doit être composé de 10 chiffres.");
+        }
+
+        if (request.getAmount() == null || request.getAmount() <= 0) {
+            throw new IllegalArgumentException("Le montant de recharge Rapido doit être supérieur à 0.");
+        }
+
+        // Vérifier l'existence de la carte Rapido
+        CarteRapido carte = carteRapidoRepository.findByNumeroCarte(cardNumber)
+                .orElseThrow(() -> new IllegalArgumentException("La carte Rapido avec le numéro '" + cardNumber + "' n'existe pas dans le système."));
+
+        validateUser(senderPhone);
+
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, cardNumber, request.getAmount(), "PAIEMENT_RAPIDO", "WALLET");
+        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+
+        // Créditer le solde de la carte Rapido après débit réussi
+        carte.setSolde(carte.getSolde() + request.getAmount());
+        carteRapidoRepository.save(carte);
+
+        // Tracking
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("carteRapido", cardNumber);
+        payload.put("montant", request.getAmount());
+        payload.put("nouveauSoldeCarte", carte.getSolde());
+        sendTrackingEvent("ACHAT_RAPIDO", senderPhone, xUserId, xUserRole, payload);
+
+        return txn;
+    }
+
+    private void validateUser(String sender) {
+        try {
+            userProxy.getClientByNumber(sender, null, null, "INTERNAL");
+        } catch (feign.FeignException.NotFound e) {
+            throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + " " + NONEXISTENT);
+        } catch (feign.FeignException e) {
+            throw new LinkException("Erreur de communication avec le service utilisateur pour validation de l'acheteur : " + e.getMessage());
+        }
     }
 
     private void validateUsers(String sender, String receiver) {
