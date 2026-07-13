@@ -1,12 +1,13 @@
 package com.financedomain.pricing.proxy;
 
+import com.financedomain.pricing.proxy.fallback.UserProxyFallback;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "user-service")
+@FeignClient(name = "user-service", fallback = UserProxyFallback.class)
 public interface UserProxy {
 
     @GetMapping("/users/client/number/{number}")
