@@ -2,13 +2,14 @@ package com.financedomain.pricing.proxy;
 
 import com.financedomain.pricing.dto.WalletPurchaseRequest;
 import com.financedomain.pricing.dto.TransactionDto;
+import com.financedomain.pricing.proxy.fallback.WalletProxyFallback;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "wallet-service")
+@FeignClient(name = "wallet-service", fallback = WalletProxyFallback.class)
 public interface WalletProxy {
 
     @PostMapping("/transactions/purchase")
