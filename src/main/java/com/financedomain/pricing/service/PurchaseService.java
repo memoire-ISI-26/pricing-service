@@ -18,8 +18,12 @@ import com.financedomain.pricing.repository.PassIllimixRepository;
 import com.financedomain.pricing.repository.PassIlliflexRepository;
 import com.financedomain.pricing.bean.CarteRapido;
 import com.financedomain.pricing.repository.CarteRapidoRepository;
+import feign.FeignException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -77,6 +81,7 @@ public class PurchaseService {
         payload.put("passNom", pass.getNom());
         payload.put("prix", pass.getPrix());
         payload.put("receveur", receiver);
+        payload.put("paymentMethod", request.getPaymentMethod());
         sendTrackingEvent("ACHAT_PASS_INTERNET", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -109,6 +114,7 @@ public class PurchaseService {
         payload.put("passNom", pass.getNom());
         payload.put("prix", pass.getPrix());
         payload.put("receveur", receiver);
+        payload.put("paymentMethod", request.getPaymentMethod());
         sendTrackingEvent("ACHAT_PASS_ILLIMIX", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -141,6 +147,7 @@ public class PurchaseService {
         payload.put("passNom", pass.getNom());
         payload.put("prix", pass.getPrix());
         payload.put("receveur", receiver);
+        payload.put("paymentMethod", request.getPaymentMethod());
         sendTrackingEvent("ACHAT_PASS_ILLIFLEX", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -164,12 +171,46 @@ public class PurchaseService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("montant", request.getAmount());
         payload.put("receveur", receiver);
+        payload.put("paymentMethod", request.getPaymentMethod());
         sendTrackingEvent("ACHAT_CREDIT", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
     }
 
     private void sendTrackingEvent(String eventType, String msisdn, String userId, String userRole, Object payload) {
+        String xUserMode = "SIMPLE";
+        String xUserUniverse = null;
+        try {
+            ServletRequestAttributes attributes =
+                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                String headerMode = request.getHeader("X-User-Mode");
+                if (headerMode != null) {
+                    xUserMode = headerMode;
+                }
+                String headerUniverse = request.getHeader("X-User-Universe");
+                if (headerUniverse != null) {
+                    xUserUniverse = headerUniverse;
+                }
+            }
+        } catch (Exception e) {
+            // Ignore context issues
+        }
+
+        if (payload instanceof Map) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = (Map<String, Object>) payload;
+                map.put("mode", xUserMode);
+                if (xUserUniverse != null) {
+                    map.put("universe", xUserUniverse);
+                }
+            } catch (Exception e) {
+                // Ignore map cast issues
+            }
+        }
+
         try {
             TrackingEvent event = TrackingEvent.builder()
                     .eventType(eventType)
@@ -222,9 +263,9 @@ public class PurchaseService {
     private void validateUser(String sender) {
         try {
             userProxy.getClientByNumber(sender, null, null, "INTERNAL");
-        } catch (feign.FeignException.NotFound e) {
+        } catch (FeignException.NotFound e) {
             throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + " " + NONEXISTENT);
-        } catch (feign.FeignException e) {
+        } catch (FeignException e) {
             throw new LinkException("Erreur de communication avec le service utilisateur pour validation de l'acheteur : " + e.getMessage());
         }
     }
@@ -233,9 +274,9 @@ public class PurchaseService {
         // Validate sender - using INTERNAL role to bypass self-lookup check
         try {
             userProxy.getClientByNumber(sender, null, null, "INTERNAL");
-        } catch (feign.FeignException.NotFound e) {
+        } catch (FeignException.NotFound e) {
             throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + " " + NONEXISTENT);
-        } catch (feign.FeignException e) {
+        } catch (FeignException e) {
             throw new LinkException("Erreur de communication avec le service utilisateur pour validation de l'acheteur : " + e.getMessage());
         }
 
@@ -243,24 +284,44 @@ public class PurchaseService {
         if (!sender.equals(receiver)) {
             try {
                 userProxy.getClientByNumber(receiver, null, null, "INTERNAL");
-            } catch (feign.FeignException.NotFound e) {
+            } catch (FeignException.NotFound e) {
                 throw new UserNotFoundException("Le client destinataire avec le numéro '" + receiver + " " + NONEXISTENT);
-            } catch (feign.FeignException e) {
+            } catch (FeignException e) {
                 throw new LinkException("Erreur de communication avec le service utilisateur pour validation du destinataire : " + e.getMessage());
             }
         }
     }
 
     private TransactionDto callWalletService(WalletPurchaseRequest walletRequest, String xUserPhone, String xUserRole) {
+        String xUserMode = "SIMPLE";
+        String xUserUniverse = null;
         try {
-            return walletProxy.purchase(walletRequest, xUserPhone, xUserRole).getBody();
-        } catch (feign.FeignException.NotFound e) {
+            ServletRequestAttributes attributes =
+                (ServletRequestAttributes) org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                String headerMode = request.getHeader("X-User-Mode");
+                if (headerMode != null) {
+                    xUserMode = headerMode;
+                }
+                String headerUniverse = request.getHeader("X-User-Universe");
+                if (headerUniverse != null) {
+                    xUserUniverse = headerUniverse;
+                }
+            }
+        } catch (Exception e) {
+            // Ignore context issues
+        }
+
+        try {
+            return walletProxy.purchase(walletRequest, xUserPhone, xUserRole, xUserMode, xUserUniverse).getBody();
+        } catch (FeignException.NotFound e) {
             throw new UserNotFoundException("Compte portefeuille introuvable pour l'acheteur.");
-        } catch (feign.FeignException.BadRequest e) {
+        } catch (FeignException.BadRequest e) {
             String content = e.contentUTF8();
             String errorMsg = content != null && !content.isEmpty() ? content : e.getMessage();
             throw new IllegalArgumentException(errorMsg);
-        } catch (feign.FeignException e) {
+        } catch (FeignException e) {
             throw new LinkException("Erreur lors de la communication avec le service portefeuille : " + e.getMessage());
         }
     }
