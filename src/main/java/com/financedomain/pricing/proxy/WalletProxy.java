@@ -16,6 +16,8 @@ public interface WalletProxy {
     ResponseEntity<TransactionDto> purchase(
             @RequestBody WalletPurchaseRequest request,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
-            @RequestHeader(value = "X-User-Role", required = false) String xUserRole
+            @RequestHeader(value = "X-User-Role", required = false) String xUserRole,
+            @RequestHeader(value = "X-User-Mode", required = false) String xUserMode,
+            @RequestHeader(value = "X-User-Universe", required = false) String xUserUniverse
     );
 }
