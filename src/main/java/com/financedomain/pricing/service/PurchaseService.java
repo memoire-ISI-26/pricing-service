@@ -3,6 +3,7 @@ package com.financedomain.pricing.service;
 import com.financedomain.pricing.bean.PassInternet;
 import com.financedomain.pricing.bean.PassIllimix;
 import com.financedomain.pricing.bean.PassIlliflex;
+import com.financedomain.pricing.bean.PassInternational;
 import com.financedomain.pricing.dto.PurchaseRequest;
 import com.financedomain.pricing.dto.TrackingEvent;
 import com.financedomain.pricing.dto.WalletPurchaseRequest;
@@ -16,6 +17,7 @@ import com.financedomain.pricing.proxy.WalletProxy;
 import com.financedomain.pricing.repository.PassInternetRepository;
 import com.financedomain.pricing.repository.PassIllimixRepository;
 import com.financedomain.pricing.repository.PassIlliflexRepository;
+import com.financedomain.pricing.repository.PassInternationalRepository;
 import com.financedomain.pricing.bean.CarteRapido;
 import com.financedomain.pricing.repository.CarteRapidoRepository;
 import feign.FeignException;
@@ -31,6 +33,13 @@ import java.util.Map;
 @Service
 public class PurchaseService {
 
+    private static final String ID = "passId";
+    private static final String NOM = "passNom";
+    private static final String PRIX = "prix";
+    private static final String RECEVEUR = "receveur";
+    private static final String PAYMENT = "paymentMethod";
+    private static final String INTERNAL = "INTERNAL";
+
     @Autowired
     private PassInternetRepository passInternetRepository;
 
@@ -39,6 +48,9 @@ public class PurchaseService {
 
     @Autowired
     private PassIlliflexRepository passIlliflexRepository;
+
+    @Autowired
+    private PassInternationalRepository passInternationalRepository;
 
     @Autowired
     private CarteRapidoRepository carteRapidoRepository;
@@ -77,11 +89,11 @@ public class PurchaseService {
 
         // Tracking
         Map<String, Object> payload = new HashMap<>();
-        payload.put("passId", pass.getId());
-        payload.put("passNom", pass.getNom());
-        payload.put("prix", pass.getPrix());
-        payload.put("receveur", receiver);
-        payload.put("paymentMethod", request.getPaymentMethod());
+        payload.put(ID, pass.getId());
+        payload.put(NOM, pass.getNom());
+        payload.put(PRIX, pass.getPrix());
+        payload.put(RECEVEUR, receiver);
+        payload.put(PAYMENT, request.getPaymentMethod());
         sendTrackingEvent("ACHAT_PASS_INTERNET", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -110,11 +122,11 @@ public class PurchaseService {
 
         // Tracking
         Map<String, Object> payload = new HashMap<>();
-        payload.put("passId", pass.getId());
-        payload.put("passNom", pass.getNom());
-        payload.put("prix", pass.getPrix());
-        payload.put("receveur", receiver);
-        payload.put("paymentMethod", request.getPaymentMethod());
+        payload.put(ID, pass.getId());
+        payload.put(NOM, pass.getNom());
+        payload.put(PRIX, pass.getPrix());
+        payload.put(RECEVEUR, receiver);
+        payload.put(PAYMENT, request.getPaymentMethod());
         sendTrackingEvent("ACHAT_PASS_ILLIMIX", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -143,12 +155,45 @@ public class PurchaseService {
 
         // Tracking
         Map<String, Object> payload = new HashMap<>();
-        payload.put("passId", pass.getId());
-        payload.put("passNom", pass.getNom());
-        payload.put("prix", pass.getPrix());
-        payload.put("receveur", receiver);
-        payload.put("paymentMethod", request.getPaymentMethod());
+        payload.put(ID, pass.getId());
+        payload.put(NOM, pass.getNom());
+        payload.put(PRIX, pass.getPrix());
+        payload.put(RECEVEUR, receiver);
+        payload.put(PAYMENT, request.getPaymentMethod());
         sendTrackingEvent("ACHAT_PASS_ILLIFLEX", senderPhone, xUserId, xUserRole, payload);
+
+        return txn;
+    }
+
+    public TransactionDto purchasePassInternational(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+        PassInternational pass = null;
+        if (request.getPassId() != null) {
+            pass = passInternationalRepository.findById(request.getPassId())
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass International avec l'id " + request.getPassId() + " " + NONEXISTENT));
+        } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
+            pass = passInternationalRepository.findByNom(request.getPassName())
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass International avec le nom '" + request.getPassName() + " " + NONEXISTENT));
+        } else {
+            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass international à acheter.");
+        }
+
+        String receiver = request.getReceiverNumber() != null && !request.getReceiverNumber().trim().isEmpty()
+                ? request.getReceiverNumber()
+                : senderPhone;
+
+        validateUsers(senderPhone, receiver);
+
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNATIONAL", request.getPaymentMethod());
+        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+
+        // Tracking
+        Map<String, Object> payload = new HashMap<>();
+        payload.put(ID, pass.getId());
+        payload.put(NOM, pass.getNom());
+        payload.put(PRIX, pass.getPrix());
+        payload.put(RECEVEUR, receiver);
+        payload.put(PAYMENT, request.getPaymentMethod());
+        sendTrackingEvent("ACHAT_PASS_INTERNATIONAL", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
     }
@@ -170,8 +215,8 @@ public class PurchaseService {
         // Tracking
         Map<String, Object> payload = new HashMap<>();
         payload.put("montant", request.getAmount());
-        payload.put("receveur", receiver);
-        payload.put("paymentMethod", request.getPaymentMethod());
+        payload.put(RECEVEUR, receiver);
+        payload.put(PAYMENT, request.getPaymentMethod());
         sendTrackingEvent("ACHAT_CREDIT", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -221,7 +266,7 @@ public class PurchaseService {
                     .payload(payload)
                     .timestamp(java.time.Instant.now())
                     .build();
-            trackingProxy.collectEvent(event, "INTERNAL");
+            trackingProxy.collectEvent(event, INTERNAL);
         } catch (Exception e) {
             System.err.println("Erreur de tracking pricing: " + e.getMessage());
         }
@@ -262,7 +307,7 @@ public class PurchaseService {
 
     private void validateUser(String sender) {
         try {
-            userProxy.getClientByNumber(sender, null, null, "INTERNAL");
+            userProxy.getClientByNumber(sender, null, null, INTERNAL);
         } catch (FeignException.NotFound e) {
             throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + " " + NONEXISTENT);
         } catch (FeignException e) {
@@ -273,7 +318,7 @@ public class PurchaseService {
     private void validateUsers(String sender, String receiver) {
         // Validate sender - using INTERNAL role to bypass self-lookup check
         try {
-            userProxy.getClientByNumber(sender, null, null, "INTERNAL");
+            userProxy.getClientByNumber(sender, null, null, INTERNAL);
         } catch (FeignException.NotFound e) {
             throw new UserNotFoundException("Le client acheteur avec le numéro '" + sender + " " + NONEXISTENT);
         } catch (FeignException e) {
@@ -283,7 +328,7 @@ public class PurchaseService {
         // Validate receiver if different
         if (!sender.equals(receiver)) {
             try {
-                userProxy.getClientByNumber(receiver, null, null, "INTERNAL");
+                userProxy.getClientByNumber(receiver, null, null, INTERNAL);
             } catch (FeignException.NotFound e) {
                 throw new UserNotFoundException("Le client destinataire avec le numéro '" + receiver + " " + NONEXISTENT);
             } catch (FeignException e) {
