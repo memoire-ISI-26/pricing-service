@@ -183,7 +183,7 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNATIONAL", request.getPaymentMethod());
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNATIONAL", "WALLET");
         TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
 
         // Tracking
@@ -192,7 +192,7 @@ public class PurchaseService {
         payload.put(NOM, pass.getNom());
         payload.put(PRIX, pass.getPrix());
         payload.put(RECEVEUR, receiver);
-        payload.put(PAYMENT, request.getPaymentMethod());
+        payload.put(PAYMENT, "WALLET");
         sendTrackingEvent("ACHAT_PASS_INTERNATIONAL", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
