@@ -22,6 +22,7 @@ import com.financedomain.pricing.bean.CarteRapido;
 import com.financedomain.pricing.repository.CarteRapidoRepository;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -30,6 +31,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class PurchaseService {
 
@@ -269,7 +271,7 @@ public class PurchaseService {
                     .build();
             trackingProxy.collectEvent(event, INTERNAL);
         } catch (Exception e) {
-            System.err.println("Erreur de tracking pricing: " + e.getMessage());
+            log.error("Erreur de tracking pricing: " + e.getMessage());
         }
     }
 
