@@ -39,6 +39,7 @@ public class PurchaseService {
     private static final String RECEVEUR = "receveur";
     private static final String PAYMENT = "paymentMethod";
     private static final String INTERNAL = "INTERNAL";
+    private static final String WALLET = "WALLET";
 
     @Autowired
     private PassInternetRepository passInternetRepository;
@@ -183,7 +184,7 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNATIONAL", "WALLET");
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNATIONAL", WALLET);
         TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
 
         // Tracking
@@ -192,7 +193,7 @@ public class PurchaseService {
         payload.put(NOM, pass.getNom());
         payload.put(PRIX, pass.getPrix());
         payload.put(RECEVEUR, receiver);
-        payload.put(PAYMENT, "WALLET");
+        payload.put(PAYMENT, WALLET);
         sendTrackingEvent("ACHAT_PASS_INTERNATIONAL", senderPhone, xUserId, xUserRole, payload);
 
         return txn;
@@ -209,7 +210,7 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, request.getAmount(), "ACHAT_CREDIT", "WALLET");
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, request.getAmount(), "ACHAT_CREDIT", WALLET);
         TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
 
         // Tracking
@@ -288,7 +289,7 @@ public class PurchaseService {
 
         validateUser(senderPhone);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, cardNumber, request.getAmount(), "PAIEMENT_RAPIDO", "WALLET");
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, cardNumber, request.getAmount(), "PAIEMENT_RAPIDO", WALLET);
         TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
 
         // Créditer le solde de la carte Rapido après débit réussi
