@@ -1,32 +1,17 @@
 package com.financedomain.pricing.service;
 
-import com.financedomain.pricing.bean.PassInternet;
-import com.financedomain.pricing.bean.PassIllimix;
-import com.financedomain.pricing.bean.PassIlliflex;
-import com.financedomain.pricing.bean.PassInternational;
-import com.financedomain.pricing.dto.PurchaseRequest;
-import com.financedomain.pricing.dto.TrackingEvent;
-import com.financedomain.pricing.dto.WalletPurchaseRequest;
-import com.financedomain.pricing.dto.TransactionDto;
-import com.financedomain.pricing.exception.PassNotFoundException;
-import com.financedomain.pricing.exception.UserNotFoundException;
-import com.financedomain.pricing.exception.LinkException;
-import com.financedomain.pricing.proxy.TrackingProxy;
-import com.financedomain.pricing.proxy.UserProxy;
-import com.financedomain.pricing.proxy.WalletProxy;
-import com.financedomain.pricing.repository.PassInternetRepository;
-import com.financedomain.pricing.repository.PassIllimixRepository;
-import com.financedomain.pricing.repository.PassIlliflexRepository;
-import com.financedomain.pricing.repository.PassInternationalRepository;
-import com.financedomain.pricing.bean.CarteRapido;
-import com.financedomain.pricing.repository.CarteRapidoRepository;
+import com.financedomain.pricing.bean.*;
+import com.financedomain.pricing.dto.*;
+import com.financedomain.pricing.exception.*;
+import com.financedomain.pricing.proxy.*;
+import com.financedomain.pricing.repository.*;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.context.request.*;
+
 
 import java.util.HashMap;
 import java.util.Map;
