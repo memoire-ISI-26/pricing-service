@@ -3,7 +3,6 @@ package com.financedomain.pricing.controller;
 import com.financedomain.pricing.bean.CarteRapido;
 import com.financedomain.pricing.dto.CarteRegistredDto;
 import com.financedomain.pricing.repository.CarteRapidoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,14 +15,17 @@ public class RapidoController {
 
     private static final String UNAUTHORIZED = "Unauthorized";
 
-    @Autowired
     private CarteRapidoRepository carteRapidoRepository;
+
+    public RapidoController(CarteRapidoRepository carteRapidoRepository) {
+        this.carteRapidoRepository = carteRapidoRepository;
+    }
 
     /**
      * Enregistrer une nouvelle carte Rapido dans le système (sans propriétaire).
      */
     @PostMapping("/register")
-    public ResponseEntity<?> registerCard(
+    public ResponseEntity<Object> registerCard(
             @RequestBody Map<String, Object> request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) {
@@ -55,7 +57,7 @@ public class RapidoController {
      * Obtenir les détails d'une carte Rapido par son numéro de carte.
      */
     @GetMapping("/card/{numero}")
-    public ResponseEntity<?> getCardDetails(
+    public ResponseEntity<Object> getCardDetails(
             @PathVariable String numero,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) {
@@ -63,7 +65,7 @@ public class RapidoController {
         }
 
         return carteRapidoRepository.findByNumeroCarte(numero)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 

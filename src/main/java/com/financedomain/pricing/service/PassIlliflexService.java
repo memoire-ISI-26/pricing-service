@@ -8,7 +8,6 @@ import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.repository.PalierIlliflexRepository;
 import com.financedomain.pricing.repository.PassIlliflexRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -20,11 +19,14 @@ import java.util.List;
 @Service
 public class PassIlliflexService {
 
-    @Autowired
-    private PassIlliflexRepository passIlliflexRepository;
+    private final PassIlliflexRepository passIlliflexRepository;
 
-    @Autowired
-    private PalierIlliflexRepository palierIlliflexRepository;
+    private final PalierIlliflexRepository palierIlliflexRepository;
+
+    public PassIlliflexService(PassIlliflexRepository passIlliflexRepository, PalierIlliflexRepository palierIlliflexRepository) {
+        this.passIlliflexRepository = passIlliflexRepository;
+        this.palierIlliflexRepository = palierIlliflexRepository;
+    }
 
     @Transactional
     @CacheEvict(value = "passIlliflexList", allEntries = true)

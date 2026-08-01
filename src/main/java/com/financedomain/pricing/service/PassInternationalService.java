@@ -6,7 +6,6 @@ import com.financedomain.pricing.enums.PeriodePass;
 import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.repository.PassInternationalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -17,8 +16,11 @@ import java.util.List;
 @Service
 public class PassInternationalService {
 
-    @Autowired
-    private PassInternationalRepository passInternationalRepository;
+    private final PassInternationalRepository passInternationalRepository;
+
+    public PassInternationalService(PassInternationalRepository passInternationalRepository) {
+        this.passInternationalRepository = passInternationalRepository;
+    }
 
     @Caching(evict = {
         @CacheEvict(value = "passInternationalList", allEntries = true),

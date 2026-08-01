@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class UserProxyFallback implements UserProxy {
 
     @Override
-    public ResponseEntity<?> getClientByNumber(String number, String xUserId, String xUserPhone, String xUserRole) {
+    public ResponseEntity<Object> getClientByNumber(String number, String xUserId, String xUserPhone, String xUserRole) {
         log.warn("[Fallback] user-service est indisponible. Impossible de valider le numéro de client : {}", number);
         throw new NotAvailableException("Le service de validation des utilisateurs (user-service) est indisponible. Veuillez réessayer plus tard.");
     }

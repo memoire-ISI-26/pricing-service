@@ -3,7 +3,6 @@ package com.financedomain.pricing.controller;
 import com.financedomain.pricing.dto.PurchaseRequest;
 import com.financedomain.pricing.dto.TransactionDto;
 import com.financedomain.pricing.service.PurchaseService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +13,14 @@ public class PurchaseController {
 
     private static final String UNAUTHORIZED = "Unauthorized";
 
-    @Autowired
-    private PurchaseService purchaseService;
+    private final PurchaseService purchaseService;
+
+    public PurchaseController(PurchaseService purchaseService) {
+        this.purchaseService = purchaseService;
+    }
 
     @PostMapping("/pass-internet")
-    public ResponseEntity<?> purchasePassInternet(
+    public ResponseEntity<Object> purchasePassInternet(
             @RequestBody PurchaseRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
@@ -31,7 +33,7 @@ public class PurchaseController {
     }
 
     @PostMapping("/pass-illimix")
-    public ResponseEntity<?> purchasePassIllimix(
+    public ResponseEntity<Object> purchasePassIllimix(
             @RequestBody PurchaseRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
@@ -44,7 +46,7 @@ public class PurchaseController {
     }
 
     @PostMapping("/pass-illiflex")
-    public ResponseEntity<?> purchasePassIlliflex(
+    public ResponseEntity<Object> purchasePassIlliflex(
             @RequestBody PurchaseRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
@@ -57,7 +59,7 @@ public class PurchaseController {
     }
 
     @PostMapping("/pass-international")
-    public ResponseEntity<?> purchasePassInternational(
+    public ResponseEntity<Object> purchasePassInternational(
             @RequestBody PurchaseRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
@@ -70,7 +72,7 @@ public class PurchaseController {
     }
 
     @PostMapping("/credit")
-    public ResponseEntity<?> purchaseCredit(
+    public ResponseEntity<Object> purchaseCredit(
             @RequestBody PurchaseRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,
@@ -83,7 +85,7 @@ public class PurchaseController {
     }
 
     @PostMapping("/rapido")
-    public ResponseEntity<?> purchaseRapido(
+    public ResponseEntity<Object> purchaseRapido(
             @RequestBody PurchaseRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,

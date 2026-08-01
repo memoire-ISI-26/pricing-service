@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 public interface UserProxy {
 
     @GetMapping("/users/client/number/{number}")
-    ResponseEntity<?> getClientByNumber(
+    ResponseEntity<Object> getClientByNumber(
             @PathVariable("number") String number,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "X-User-Phone", required = false) String xUserPhone,

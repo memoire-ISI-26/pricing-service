@@ -6,7 +6,6 @@ import com.financedomain.pricing.dto.PassInternetRequest;
 import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.service.PassInternetService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,11 +21,14 @@ public class PassInternetController {
     private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
     private static final String ADMINISTRATOR  = "ADMINISTRATOR";
 
-    @Autowired
-    private PassInternetService passInternetService;
+    private final PassInternetService passInternetService;
 
-    @Autowired
-    private Environment environment;
+    private final Environment environment;
+
+    public PassInternetController(PassInternetService passInternetService, Environment environment) {
+        this.passInternetService = passInternetService;
+        this.environment = environment;
+    }
 
     private String getPort() {
         return environment.getProperty("local.server.port", "unknown");
@@ -35,7 +37,7 @@ public class PassInternetController {
     // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
 
     @GetMapping
-    public ResponseEntity<?> getAllPass(
+    public ResponseEntity<Object> getAllPass(
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         List<PassInternet> list = passInternetService.getAllPass();
@@ -43,7 +45,7 @@ public class PassInternetController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPassById(
+    public ResponseEntity<Object> getPassById(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -55,7 +57,7 @@ public class PassInternetController {
     }
 
     @GetMapping("/periode/{periode}")
-    public ResponseEntity<?> getPassByPeriode(
+    public ResponseEntity<Object> getPassByPeriode(
             @PathVariable String periode,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -70,7 +72,7 @@ public class PassInternetController {
     // ── Écriture : réservé à l'administrateur ────────────────────────────────
 
     @PostMapping
-    public ResponseEntity<?> createPass(
+    public ResponseEntity<Object> createPass(
             @RequestBody PassInternetRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -86,7 +88,7 @@ public class PassInternetController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePass(
+    public ResponseEntity<Object> updatePass(
             @PathVariable Long id,
             @RequestBody PassInternetRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
@@ -102,7 +104,7 @@ public class PassInternetController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePass(
+    public ResponseEntity<Object> deletePass(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);

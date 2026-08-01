@@ -8,7 +8,6 @@ import com.financedomain.pricing.repository.*;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.*;
 
@@ -28,29 +27,32 @@ public class PurchaseService {
     private static final String INTERNAL = "INTERNAL";
     private static final String WALLET = "WALLET";
 
-    @Autowired
-    private PassInternetRepository passInternetRepository;
+    private final PassInternetRepository passInternetRepository;
 
-    @Autowired
-    private PassIllimixRepository passIllimixRepository;
+    private final PassIllimixRepository passIllimixRepository;
 
-    @Autowired
-    private PassIlliflexRepository passIlliflexRepository;
+    private final PassIlliflexRepository passIlliflexRepository;
 
-    @Autowired
-    private PassInternationalRepository passInternationalRepository;
+    private final PassInternationalRepository passInternationalRepository;
 
-    @Autowired
-    private CarteRapidoRepository carteRapidoRepository;
+    private final CarteRapidoRepository carteRapidoRepository;
 
-    @Autowired
-    private UserProxy userProxy;
+    private final UserProxy userProxy;
 
-    @Autowired
-    private WalletProxy walletProxy;
+    private final WalletProxy walletProxy;
 
-    @Autowired
-    private TrackingProxy trackingProxy;
+    private final TrackingProxy trackingProxy;
+
+    public PurchaseService(PassInternetRepository passInternetRepository, PassIllimixRepository passIllimixRepository, PassIlliflexRepository passIlliflexRepository, PassInternationalRepository passInternationalRepository, CarteRapidoRepository carteRapidoRepository, UserProxy userProxy, WalletProxy walletProxy, TrackingProxy trackingProxy) {
+        this.passInternetRepository = passInternetRepository;
+        this.passIllimixRepository = passIllimixRepository;
+        this.passIlliflexRepository = passIlliflexRepository;
+        this.passInternationalRepository = passInternationalRepository;
+        this.carteRapidoRepository = carteRapidoRepository;
+        this.userProxy = userProxy;
+        this.walletProxy = walletProxy;
+        this.trackingProxy = trackingProxy;
+    }
 
     private static final String NONEXISTENT = "n'existe pas.";
 

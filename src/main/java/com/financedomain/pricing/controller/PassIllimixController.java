@@ -4,7 +4,6 @@ import com.financedomain.pricing.bean.PassIllimix;
 import com.financedomain.pricing.dto.*;
 import com.financedomain.pricing.exception.*;
 import com.financedomain.pricing.service.PassIllimixService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -19,11 +18,14 @@ public class PassIllimixController {
     private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
     private static final String ADMINISTRATOR = "ADMINISTRATOR";
 
-    @Autowired
-    private PassIllimixService passIllimixService;
+    private final PassIllimixService passIllimixService;
 
-    @Autowired
-    private Environment environment;
+    private final Environment environment;
+
+    public PassIllimixController(PassIllimixService passIllimixService, Environment environment) {
+        this.passIllimixService = passIllimixService;
+        this.environment = environment;
+    }
 
     private String getPort() {
         return environment.getProperty("local.server.port", "unknown");
@@ -32,7 +34,7 @@ public class PassIllimixController {
     // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
 
     @GetMapping
-    public ResponseEntity<?> getAllPass(
+    public ResponseEntity<Object> getAllPass(
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         List<PassIllimix> list = passIllimixService.getAllPass();
@@ -40,7 +42,7 @@ public class PassIllimixController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPassById(
+    public ResponseEntity<Object> getPassById(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -52,7 +54,7 @@ public class PassIllimixController {
     }
 
     @GetMapping("/periode/{periode}")
-    public ResponseEntity<?> getPassByPeriode(
+    public ResponseEntity<Object> getPassByPeriode(
             @PathVariable String periode,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -67,7 +69,7 @@ public class PassIllimixController {
     // ── Écriture : réservé à l'administrateur ────────────────────────────────
 
     @PostMapping
-    public ResponseEntity<?> createPass(
+    public ResponseEntity<Object> createPass(
             @RequestBody PassIllimixRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -83,7 +85,7 @@ public class PassIllimixController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePass(
+    public ResponseEntity<Object> updatePass(
             @PathVariable Long id,
             @RequestBody PassIllimixRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
@@ -99,7 +101,7 @@ public class PassIllimixController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePass(
+    public ResponseEntity<Object> deletePass(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);

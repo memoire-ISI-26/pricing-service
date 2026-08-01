@@ -7,7 +7,6 @@ import com.financedomain.pricing.dto.PassIlliflexRequest;
 import com.financedomain.pricing.exception.PassAlreadyExistsException;
 import com.financedomain.pricing.exception.PassNotFoundException;
 import com.financedomain.pricing.service.PassIlliflexService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,11 +22,14 @@ public class PassIlliflexController {
     private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
     private static final String ADMINISTRATOR = "ADMINISTRATOR";
 
-    @Autowired
-    private PassIlliflexService passIlliflexService;
+    private final PassIlliflexService passIlliflexService;
 
-    @Autowired
-    private Environment environment;
+    private final Environment environment;
+
+    public PassIlliflexController(PassIlliflexService passIlliflexService, Environment environment) {
+        this.passIlliflexService = passIlliflexService;
+        this.environment = environment;
+    }
 
     private String getPort() {
         return environment.getProperty("local.server.port", "unknown");
@@ -36,7 +38,7 @@ public class PassIlliflexController {
     // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
 
     @GetMapping
-    public ResponseEntity<?> getAllPass(
+    public ResponseEntity<Object> getAllPass(
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
         List<PassIlliflex> list = passIlliflexService.getAllPass();
@@ -44,7 +46,7 @@ public class PassIlliflexController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPassById(
+    public ResponseEntity<Object> getPassById(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -56,7 +58,7 @@ public class PassIlliflexController {
     }
 
     @GetMapping("/{id}/paliers")
-    public ResponseEntity<?> getPaliersByPassId(
+    public ResponseEntity<Object> getPaliersByPassId(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -71,7 +73,7 @@ public class PassIlliflexController {
     // ── Écriture : réservé à l'administrateur ────────────────────────────────
 
     @PostMapping
-    public ResponseEntity<?> createPass(
+    public ResponseEntity<Object> createPass(
             @RequestBody PassIlliflexRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
@@ -85,7 +87,7 @@ public class PassIlliflexController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePass(
+    public ResponseEntity<Object> updatePass(
             @PathVariable Long id,
             @RequestBody PassIlliflexRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
@@ -99,7 +101,7 @@ public class PassIlliflexController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePass(
+    public ResponseEntity<Object> deletePass(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
         if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
