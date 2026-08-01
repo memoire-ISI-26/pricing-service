@@ -15,23 +15,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/pricing/pass-international")
-public class PassInternationalController {
-
-    private static final String UNAUTHORIZED = "Unauthorized";
-    private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
-    private static final String ADMINISTRATOR  = "ADMINISTRATOR";
+public class PassInternationalController extends AbstractPassController {
 
     private final PassInternationalService passInternationalService;
 
-    private final Environment environment;
-
     public PassInternationalController(PassInternationalService passInternationalService, Environment environment) {
+        super(environment);
         this.passInternationalService = passInternationalService;
-        this.environment = environment;
-    }
-
-    private String getPort() {
-        return environment.getProperty("local.server.port", "unknown");
     }
 
     // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
@@ -39,7 +29,8 @@ public class PassInternationalController {
     @GetMapping
     public ResponseEntity<Object> getAllPass(
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        ResponseEntity<Object> auth = validateAuth(xUserRole);
+        if (auth != null) return auth;
         List<PassInternational> list = passInternationalService.getAllPass();
         return ResponseEntity.ok(new ApiResponse<>(list, getPort()));
     }
@@ -48,7 +39,8 @@ public class PassInternationalController {
     public ResponseEntity<Object> getPassById(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        ResponseEntity<Object> auth = validateAuth(xUserRole);
+        if (auth != null) return auth;
         try {
             return ResponseEntity.ok(new ApiResponse<>(passInternationalService.getPassById(id), getPort()));
         } catch (PassNotFoundException e) {
@@ -60,7 +52,8 @@ public class PassInternationalController {
     public ResponseEntity<Object> getPassByPeriode(
             @PathVariable String periode,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        ResponseEntity<Object> auth = validateAuth(xUserRole);
+        if (auth != null) return auth;
         try {
             return ResponseEntity.ok(new ApiResponse<>(passInternationalService.getPassByPeriode(periode), getPort()));
         } catch (IllegalArgumentException e) {
@@ -75,8 +68,8 @@ public class PassInternationalController {
     public ResponseEntity<Object> createPass(
             @RequestBody PassInternationalRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
-        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        ResponseEntity<Object> admin = validateAdmin(xUserRole);
+        if (admin != null) return admin;
         try {
             PassInternational pass = passInternationalService.createPass(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(pass, getPort()));
@@ -92,8 +85,8 @@ public class PassInternationalController {
             @PathVariable Long id,
             @RequestBody PassInternationalRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
-        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        ResponseEntity<Object> admin = validateAdmin(xUserRole);
+        if (admin != null) return admin;
         try {
             return ResponseEntity.ok(new ApiResponse<>(passInternationalService.updatePass(id, request), getPort()));
         } catch (PassNotFoundException e) {
@@ -107,8 +100,8 @@ public class PassInternationalController {
     public ResponseEntity<Object> deletePass(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
-        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        ResponseEntity<Object> admin = validateAdmin(xUserRole);
+        if (admin != null) return admin;
         try {
             passInternationalService.deletePass(id);
             return ResponseEntity.noContent().build();

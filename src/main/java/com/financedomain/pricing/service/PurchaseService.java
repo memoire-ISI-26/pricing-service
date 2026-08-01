@@ -56,16 +56,28 @@ public class PurchaseService {
 
     private static final String NONEXISTENT = "n'existe pas.";
 
-    public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        PassInternet pass = null;
+    private <T extends Pass> TransactionDto processPassPurchase(
+            String passTypeName,
+            java.util.function.Function<Long, java.util.Optional<T>> findById,
+            java.util.function.Function<String, java.util.Optional<T>> findByNom,
+            String txnType,
+            String eventType,
+            String senderPhone,
+            PurchaseRequest request,
+            String xUserId,
+            String xUserPhone,
+            String xUserRole,
+            String forcedPaymentMethod
+    ) {
+        T pass = null;
         if (request.getPassId() != null) {
-            pass = passInternetRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Internet avec l'id " + request.getPassId() + " " + NONEXISTENT));
+            pass = findById.apply(request.getPassId())
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass " + passTypeName + " avec l'id " + request.getPassId() + " " + NONEXISTENT));
         } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
-            pass = passInternetRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Internet avec le nom '" + request.getPassName() + " " + NONEXISTENT));
+            pass = findByNom.apply(request.getPassName())
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass " + passTypeName + " avec le nom '" + request.getPassName() + " " + NONEXISTENT));
         } else {
-            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass internet à acheter.");
+            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass " + passTypeName.toLowerCase() + " à acheter.");
         }
 
         String receiver = request.getReceiverNumber() != null && !request.getReceiverNumber().trim().isEmpty()
@@ -74,7 +86,8 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNET", request.getPaymentMethod());
+        String paymentMethod = forcedPaymentMethod != null ? forcedPaymentMethod : request.getPaymentMethod();
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), txnType, paymentMethod);
         TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
 
         // Tracking
@@ -83,109 +96,30 @@ public class PurchaseService {
         payload.put(NOM, pass.getNom());
         payload.put(PRIX, pass.getPrix());
         payload.put(RECEVEUR, receiver);
-        payload.put(PAYMENT, request.getPaymentMethod());
-        sendTrackingEvent("ACHAT_PASS_INTERNET", senderPhone, xUserId, xUserRole, payload);
+        payload.put(PAYMENT, paymentMethod);
+        sendTrackingEvent(eventType, senderPhone, xUserId, xUserRole, payload);
 
         return txn;
+    }
+
+    public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
+        return processPassPurchase("Internet", passInternetRepository::findById, passInternetRepository::findByNom,
+                "ACHAT_INTERNET", "ACHAT_PASS_INTERNET", senderPhone, request, xUserId, xUserPhone, xUserRole, null);
     }
 
     public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        PassIllimix pass = null;
-        if (request.getPassId() != null) {
-            pass = passIllimixRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illimix avec l'id " + request.getPassId() + " " + NONEXISTENT));
-        } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
-            pass = passIllimixRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illimix avec le nom '" + request.getPassName() + " " + NONEXISTENT));
-        } else {
-            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass illimix à acheter.");
-        }
-
-        String receiver = request.getReceiverNumber() != null && !request.getReceiverNumber().trim().isEmpty()
-                ? request.getReceiverNumber()
-                : senderPhone;
-
-        validateUsers(senderPhone, receiver);
-
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_ILLIMIX", request.getPaymentMethod());
-        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
-
-        // Tracking
-        Map<String, Object> payload = new HashMap<>();
-        payload.put(ID, pass.getId());
-        payload.put(NOM, pass.getNom());
-        payload.put(PRIX, pass.getPrix());
-        payload.put(RECEVEUR, receiver);
-        payload.put(PAYMENT, request.getPaymentMethod());
-        sendTrackingEvent("ACHAT_PASS_ILLIMIX", senderPhone, xUserId, xUserRole, payload);
-
-        return txn;
+        return processPassPurchase("Illimix", passIllimixRepository::findById, passIllimixRepository::findByNom,
+                "ACHAT_ILLIMIX", "ACHAT_PASS_ILLIMIX", senderPhone, request, xUserId, xUserPhone, xUserRole, null);
     }
 
     public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        PassIlliflex pass = null;
-        if (request.getPassId() != null) {
-            pass = passIlliflexRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illiflex avec l'id " + request.getPassId() + " " + NONEXISTENT));
-        } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
-            pass = passIlliflexRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass Illiflex avec le nom '" + request.getPassName() + " " + NONEXISTENT));
-        } else {
-            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass illiflex à acheter.");
-        }
-
-        String receiver = request.getReceiverNumber() != null && !request.getReceiverNumber().trim().isEmpty()
-                ? request.getReceiverNumber()
-                : senderPhone;
-
-        validateUsers(senderPhone, receiver);
-
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_ILLIFLEX", request.getPaymentMethod());
-        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
-
-        // Tracking
-        Map<String, Object> payload = new HashMap<>();
-        payload.put(ID, pass.getId());
-        payload.put(NOM, pass.getNom());
-        payload.put(PRIX, pass.getPrix());
-        payload.put(RECEVEUR, receiver);
-        payload.put(PAYMENT, request.getPaymentMethod());
-        sendTrackingEvent("ACHAT_PASS_ILLIFLEX", senderPhone, xUserId, xUserRole, payload);
-
-        return txn;
+        return processPassPurchase("Illiflex", passIlliflexRepository::findById, passIlliflexRepository::findByNom,
+                "ACHAT_ILLIFLEX", "ACHAT_PASS_ILLIFLEX", senderPhone, request, xUserId, xUserPhone, xUserRole, null);
     }
 
     public TransactionDto purchasePassInternational(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        PassInternational pass = null;
-        if (request.getPassId() != null) {
-            pass = passInternationalRepository.findById(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass International avec l'id " + request.getPassId() + " " + NONEXISTENT));
-        } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
-            pass = passInternationalRepository.findByNom(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass International avec le nom '" + request.getPassName() + " " + NONEXISTENT));
-        } else {
-            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass international à acheter.");
-        }
-
-        String receiver = request.getReceiverNumber() != null && !request.getReceiverNumber().trim().isEmpty()
-                ? request.getReceiverNumber()
-                : senderPhone;
-
-        validateUsers(senderPhone, receiver);
-
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), "ACHAT_INTERNATIONAL", WALLET);
-        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
-
-        // Tracking
-        Map<String, Object> payload = new HashMap<>();
-        payload.put(ID, pass.getId());
-        payload.put(NOM, pass.getNom());
-        payload.put(PRIX, pass.getPrix());
-        payload.put(RECEVEUR, receiver);
-        payload.put(PAYMENT, WALLET);
-        sendTrackingEvent("ACHAT_PASS_INTERNATIONAL", senderPhone, xUserId, xUserRole, payload);
-
-        return txn;
+        return processPassPurchase("International", passInternationalRepository::findById, passInternationalRepository::findByNom,
+                "ACHAT_INTERNATIONAL", "ACHAT_PASS_INTERNATIONAL", senderPhone, request, xUserId, xUserPhone, xUserRole, WALLET);
     }
 
     public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {

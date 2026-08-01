@@ -12,23 +12,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/pricing/pass-illimix")
-public class PassIllimixController {
-
-    private static final String UNAUTHORIZED  = "Unauthorized";
-    private static final String ACCESSDENIED  = "Access Denied : réservé à l'administrateur.";
-    private static final String ADMINISTRATOR = "ADMINISTRATOR";
+public class PassIllimixController extends AbstractPassController {
 
     private final PassIllimixService passIllimixService;
 
-    private final Environment environment;
-
     public PassIllimixController(PassIllimixService passIllimixService, Environment environment) {
+        super(environment);
         this.passIllimixService = passIllimixService;
-        this.environment = environment;
-    }
-
-    private String getPort() {
-        return environment.getProperty("local.server.port", "unknown");
     }
 
     // ── Lecture : accessible à tout utilisateur authentifié ──────────────────
@@ -36,7 +26,8 @@ public class PassIllimixController {
     @GetMapping
     public ResponseEntity<Object> getAllPass(
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        ResponseEntity<Object> auth = validateAuth(xUserRole);
+        if (auth != null) return auth;
         List<PassIllimix> list = passIllimixService.getAllPass();
         return ResponseEntity.ok(new ApiResponse<>(list, getPort()));
     }
@@ -45,7 +36,8 @@ public class PassIllimixController {
     public ResponseEntity<Object> getPassById(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        ResponseEntity<Object> auth = validateAuth(xUserRole);
+        if (auth != null) return auth;
         try {
             return ResponseEntity.ok(new ApiResponse<>(passIllimixService.getPassById(id), getPort()));
         } catch (PassNotFoundException e) {
@@ -57,7 +49,8 @@ public class PassIllimixController {
     public ResponseEntity<Object> getPassByPeriode(
             @PathVariable String periode,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
+        ResponseEntity<Object> auth = validateAuth(xUserRole);
+        if (auth != null) return auth;
         try {
             return ResponseEntity.ok(new ApiResponse<>(passIllimixService.getPassByPeriode(periode), getPort()));
         } catch (IllegalArgumentException e) {
@@ -72,8 +65,8 @@ public class PassIllimixController {
     public ResponseEntity<Object> createPass(
             @RequestBody PassIllimixRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
-        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        ResponseEntity<Object> admin = validateAdmin(xUserRole);
+        if (admin != null) return admin;
         try {
             PassIllimix pass = passIllimixService.createPass(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(pass, getPort()));
@@ -89,8 +82,8 @@ public class PassIllimixController {
             @PathVariable Long id,
             @RequestBody PassIllimixRequest request,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
-        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        ResponseEntity<Object> admin = validateAdmin(xUserRole);
+        if (admin != null) return admin;
         try {
             return ResponseEntity.ok(new ApiResponse<>(passIllimixService.updatePass(id, request), getPort()));
         } catch (PassNotFoundException e) {
@@ -104,8 +97,8 @@ public class PassIllimixController {
     public ResponseEntity<Object> deletePass(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", required = false) String xUserRole) {
-        if (xUserRole == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(UNAUTHORIZED);
-        if (!ADMINISTRATOR.equals(xUserRole)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESSDENIED);
+        ResponseEntity<Object> admin = validateAdmin(xUserRole);
+        if (admin != null) return admin;
         try {
             passIllimixService.deletePass(id);
             return ResponseEntity.noContent().build();
