@@ -16,7 +16,7 @@ import java.util.List;
 @Service
 public class PassIllimixService {
 
-    private PassIllimixRepository passIllimixRepository;
+    private final PassIllimixRepository passIllimixRepository;
 
     public PassIllimixService(PassIllimixRepository passIllimixRepository) {
         this.passIllimixRepository = passIllimixRepository;

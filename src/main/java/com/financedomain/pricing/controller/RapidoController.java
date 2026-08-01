@@ -15,7 +15,7 @@ public class RapidoController {
 
     private static final String UNAUTHORIZED = "Unauthorized";
 
-    private CarteRapidoRepository carteRapidoRepository;
+    private final CarteRapidoRepository carteRapidoRepository;
 
     public RapidoController(CarteRapidoRepository carteRapidoRepository) {
         this.carteRapidoRepository = carteRapidoRepository;

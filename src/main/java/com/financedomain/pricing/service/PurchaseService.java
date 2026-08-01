@@ -14,6 +14,9 @@ import org.springframework.web.context.request.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.LongFunction;
 
 @Slf4j
 @Service
@@ -26,6 +29,24 @@ public class PurchaseService {
     private static final String PAYMENT = "paymentMethod";
     private static final String INTERNAL = "INTERNAL";
     private static final String WALLET = "WALLET";
+    private static final String NONEXISTENT = "n'existe pas.";
+
+    private record PassPurchaseConfig<T extends Pass>(
+            String passTypeName,
+            LongFunction<Optional<T>> findById,
+            Function<String, Optional<T>> findByNom,
+            String txnType,
+            String eventType,
+            String forcedPaymentMethod
+    ) {}
+
+    private record UserPurchaseContext(
+            String senderPhone,
+            PurchaseRequest request,
+            String xUserId,
+            String xUserPhone,
+            String xUserRole
+    ) {}
 
     private final PassInternetRepository passInternetRepository;
 
@@ -54,30 +75,22 @@ public class PurchaseService {
         this.trackingProxy = trackingProxy;
     }
 
-    private static final String NONEXISTENT = "n'existe pas.";
-
     private <T extends Pass> TransactionDto processPassPurchase(
-            String passTypeName,
-            java.util.function.Function<Long, java.util.Optional<T>> findById,
-            java.util.function.Function<String, java.util.Optional<T>> findByNom,
-            String txnType,
-            String eventType,
-            String senderPhone,
-            PurchaseRequest request,
-            String xUserId,
-            String xUserPhone,
-            String xUserRole,
-            String forcedPaymentMethod
+            PassPurchaseConfig<T> config,
+            UserPurchaseContext ctx
     ) {
         T pass = null;
+        PurchaseRequest request = ctx.request();
+        String senderPhone = ctx.senderPhone();
+
         if (request.getPassId() != null) {
-            pass = findById.apply(request.getPassId())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass " + passTypeName + " avec l'id " + request.getPassId() + " " + NONEXISTENT));
+            pass = config.findById().apply(request.getPassId())
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass " + config.passTypeName() + " avec l'id " + request.getPassId() + " " + NONEXISTENT));
         } else if (request.getPassName() != null && !request.getPassName().trim().isEmpty()) {
-            pass = findByNom.apply(request.getPassName())
-                    .orElseThrow(() -> new PassNotFoundException("Le Pass " + passTypeName + " avec le nom '" + request.getPassName() + " " + NONEXISTENT));
+            pass = config.findByNom().apply(request.getPassName())
+                    .orElseThrow(() -> new PassNotFoundException("Le Pass " + config.passTypeName() + " avec le nom '" + request.getPassName() + " " + NONEXISTENT));
         } else {
-            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass " + passTypeName.toLowerCase() + " à acheter.");
+            throw new IllegalArgumentException("Veuillez fournir l'id ou le nom du pass " + config.passTypeName().toLowerCase() + " à acheter.");
         }
 
         String receiver = request.getReceiverNumber() != null && !request.getReceiverNumber().trim().isEmpty()
@@ -86,9 +99,9 @@ public class PurchaseService {
 
         validateUsers(senderPhone, receiver);
 
-        String paymentMethod = forcedPaymentMethod != null ? forcedPaymentMethod : request.getPaymentMethod();
-        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), txnType, paymentMethod);
-        TransactionDto txn = callWalletService(walletRequest, xUserPhone, xUserRole);
+        String paymentMethod = config.forcedPaymentMethod() != null ? config.forcedPaymentMethod() : request.getPaymentMethod();
+        WalletPurchaseRequest walletRequest = new WalletPurchaseRequest(senderPhone, receiver, pass.getPrix(), config.txnType(), paymentMethod);
+        TransactionDto txn = callWalletService(walletRequest, ctx.xUserPhone(), ctx.xUserRole());
 
         // Tracking
         Map<String, Object> payload = new HashMap<>();
@@ -97,29 +110,41 @@ public class PurchaseService {
         payload.put(PRIX, pass.getPrix());
         payload.put(RECEVEUR, receiver);
         payload.put(PAYMENT, paymentMethod);
-        sendTrackingEvent(eventType, senderPhone, xUserId, xUserRole, payload);
+        sendTrackingEvent(config.eventType(), senderPhone, ctx.xUserId(), ctx.xUserRole(), payload);
 
         return txn;
     }
 
     public TransactionDto purchasePassInternet(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        return processPassPurchase("Internet", passInternetRepository::findById, passInternetRepository::findByNom,
-                "ACHAT_INTERNET", "ACHAT_PASS_INTERNET", senderPhone, request, xUserId, xUserPhone, xUserRole, null);
+        PassPurchaseConfig<PassInternet> config = new PassPurchaseConfig<>(
+                "Internet", passInternetRepository::findById, passInternetRepository::findByNom,
+                "ACHAT_INTERNET", "ACHAT_PASS_INTERNET", null
+        );
+        return processPassPurchase(config, new UserPurchaseContext(senderPhone, request, xUserId, xUserPhone, xUserRole));
     }
 
     public TransactionDto purchasePassIllimix(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        return processPassPurchase("Illimix", passIllimixRepository::findById, passIllimixRepository::findByNom,
-                "ACHAT_ILLIMIX", "ACHAT_PASS_ILLIMIX", senderPhone, request, xUserId, xUserPhone, xUserRole, null);
+        PassPurchaseConfig<PassIllimix> config = new PassPurchaseConfig<>(
+                "Illimix", passIllimixRepository::findById, passIllimixRepository::findByNom,
+                "ACHAT_ILLIMIX", "ACHAT_PASS_ILLIMIX", null
+        );
+        return processPassPurchase(config, new UserPurchaseContext(senderPhone, request, xUserId, xUserPhone, xUserRole));
     }
 
     public TransactionDto purchasePassIlliflex(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        return processPassPurchase("Illiflex", passIlliflexRepository::findById, passIlliflexRepository::findByNom,
-                "ACHAT_ILLIFLEX", "ACHAT_PASS_ILLIFLEX", senderPhone, request, xUserId, xUserPhone, xUserRole, null);
+        PassPurchaseConfig<PassIlliflex> config = new PassPurchaseConfig<>(
+                "Illiflex", passIlliflexRepository::findById, passIlliflexRepository::findByNom,
+                "ACHAT_ILLIFLEX", "ACHAT_PASS_ILLIFLEX", null
+        );
+        return processPassPurchase(config, new UserPurchaseContext(senderPhone, request, xUserId, xUserPhone, xUserRole));
     }
 
     public TransactionDto purchasePassInternational(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
-        return processPassPurchase("International", passInternationalRepository::findById, passInternationalRepository::findByNom,
-                "ACHAT_INTERNATIONAL", "ACHAT_PASS_INTERNATIONAL", senderPhone, request, xUserId, xUserPhone, xUserRole, WALLET);
+        PassPurchaseConfig<PassInternational> config = new PassPurchaseConfig<>(
+                "International", passInternationalRepository::findById, passInternationalRepository::findByNom,
+                "ACHAT_INTERNATIONAL", "ACHAT_PASS_INTERNATIONAL", WALLET
+        );
+        return processPassPurchase(config, new UserPurchaseContext(senderPhone, request, xUserId, xUserPhone, xUserRole));
     }
 
     public TransactionDto purchaseCredit(String senderPhone, PurchaseRequest request, String xUserId, String xUserPhone, String xUserRole) {
